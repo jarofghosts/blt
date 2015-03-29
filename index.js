@@ -28,7 +28,7 @@ function stormBolt(createStream) {
 
     touch.sync(pidFile)
 
-    thisProcess.on('beforeExit', function() {
+    thisProcess.on('exit', function() {
       fs.unlinkSync(pidFile)
     })
 
