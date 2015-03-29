@@ -1,5 +1,8 @@
 # blt
 
+[![Build Status](http://img.shields.io/travis/jarofghosts/blt.svg?style=flat)](https://travis-ci.org/jarofghosts/blt)
+[![npm install](http://img.shields.io/npm/dm/blt.svg?style=flat)](https://www.npmjs.org/package/blt)
+
 [Storm](https://storm.apache.org/) Bolts without the overhead.
 
 ## Example
