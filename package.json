@@ -4,7 +4,7 @@
   "description": "simple storm bolt creation",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/index.js"
   },
   "repository": {
     "type": "git",
@@ -21,8 +21,12 @@
   "author": "jesse keane",
   "license": "MIT",
   "dependencies": {
-    "split": "^0.3.3",
+    "storm-stream": "^1.0.0",
     "through2": "^0.6.3",
     "touch": "0.0.3"
+  },
+  "devDependencies": {
+    "proxyquire": "^1.4.0",
+    "tape": "^3.5.0"
   }
 }

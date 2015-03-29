@@ -1,6 +1,6 @@
 # blt
 
-Simplified Apache Storm Bolt creation for node.
+[Storm](https://storm.apache.org/) Bolts without the overhead.
 
 ## Example
 
@@ -10,15 +10,17 @@ var through = require('through2')
 
 createBolt(splitSentence)
 
-function splitSentence() {
-  var splitStream = through(splitWords)
+function splitSentence(configuration) {
+  var splitStream = through.obj(splitWords)
 
   return splitStream
 
-  function splitWords(data, _, next) {
-    data[0].split(' ').forEach(function(word) {
-      splitStream.push(word)
+  function splitWords(obj, _, next) {
+    obj.tuple[0].split(' ').forEach(function(word) {
+      splitStream.push([word, obj])
     })
+
+    splitStream.emit('ack', obj)
 
     next()
   }
@@ -29,10 +31,22 @@ function splitSentence() {
 
 `blt(createStream)`
 
-* `createStream` is a function that can be called with a tuple object and
-  returns a Transform Stream.
-* `createStream` will be called for every tuple passed to your Bolt, and
-  whatever stream is returned will be anchored to that tuple exclusively.
+* `createStream` is a function that can be called with a configuration object
+  and returns a Transform Stream.
+* `blt` will write tuple objects directly to the returned stream, and it is
+  expected to stream arrays of form: `[data, tuple]`, where `data` is the data
+  to emit, and `tuple` is the Storm tuple that it is anchored to.
+
+## Events
+
+* When your stream emits data, `blt` emits the data packaged up in Storm's tuple
+  format with all of the applicable anchoring data.
+* If your stream emits a "log" event with an argument, `blt` passes it along to
+  Storm as a "log" event with `msg`.
+* If your stream emits a "fail" event with the relevant tuple, `blt` will "fail"
+  for you.
+* If your stream emits an "ack" event with the relevant tuple, `blt` will "ack"
+  for you.
 
 ## Usage
 
@@ -41,16 +55,12 @@ Storm.
 
 * Creates PID file and handshakes with Storm at startup.
 * Handles responding to heartbeats.
-* When your stream emits, `blt` emits the data packaged up in Storm's tuple
-  format with all of the anchoring data needed.
-* If your stream emits a "log" event with an argument, `blt` passes it along to
-  Storm as a "log" event with `msg`.
-* If your stream emits an "error" event, `blt` will "fail" for you.
-* When your stream ends, `blt` "ack"s for you.
 
 ## Notes
 
 * This is experimental and relatively untested, use at your own risk!
+* This module is somewhat optimized for a simplified use-case, if you need more,
+  try [node-storm](http://npm.im/node-storm)
 
 ## License
 

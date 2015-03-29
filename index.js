@@ -1,67 +1,71 @@
 var path = require('path')
+  , fs = require('fs')
 
-var through = require('through2')
-  , split = require('split')
+var stormStream = require('storm-stream')
+  , through = require('through2')
   , touch = require('touch')
 
-var PID = process.pid
+var thisProcess = require('./lib/process')
+
+var PID = thisProcess.pid
 
 module.exports = stormBolt
 
 function stormBolt(createStream) {
-  var input = process.stdin.pipe(split()).pipe(through.obj(deserialize))
-    , output = through.obj(serialize)
+  var storm = stormStream()
+    , blt = through.obj()
+    , pidFile
+    , stream
 
-  output.pipe(process.stdout)
+  blt.pipe(storm)
 
-  input.once('data', setup)
+  storm.once('data', setup)
+
+  return blt
 
   function setup(data) {
-    touch.sync(path.join(data.pidDir, PID.toString()))
+    pidFile = path.join(data.pidDir, PID.toString())
 
-    output.write({pid: PID})
+    touch.sync(pidFile)
 
-    input.on('data', processTuple)
+    thisProcess.on('beforeExit', function() {
+      fs.unlinkSync(pidFile)
+    })
+
+    blt.write({pid: PID})
+
+    stream = createStream(data)
+
+    stream.on('log', onLog)
+    stream.on('data', onData)
+    stream.on('fail', onFail)
+    stream.on('ack', onAck)
+
+    storm.on('data', processTuple)
+
+    function onLog(message) {
+      blt.write(log(message))
+    }
+
+    function onData(arr) {
+      blt.write(emit(arr[0], arr[1]))
+    }
+
+    function onFail(tuple) {
+      blt.write(fail(tuple.id))
+    }
+
+    function onAck(tuple) {
+      blt.write(ack(tuple.id))
+    }
   }
 
   function processTuple(tuple) {
     if(tuple.stream && tuple.stream === '__heartbeat') {
-      return output.write({command: 'sync'})
+      return blt.write({command: 'sync'})
     }
 
-    var stream = createStream(tuple)
-
-    stream.on('log', onLog)
-    stream.on('data', onData)
-    stream.on('error', onError)
-    stream.on('end', onEnd)
-
-    stream.end(tuple.tuple)
-
-    function onLog(data) {
-      output.write(log(data))
-    }
-
-    function onData(data) {
-      output.write(emit(data, tuple.id, tuple.task))
-    }
-
-    function onError() {
-      output.write(fail(tuple.id))
-      finish()
-    }
-
-    function onEnd() {
-      output.write(ack(tuple.id))
-      finish()
-    }
-
-    function finish() {
-      stream.removeListener('log', onLog)
-      stream.removeListener('data', onData)
-      stream.removeListener('error', onError)
-      stream.removeListener('end', onEnd)
-    }
+    stream.write(tuple)
   }
 }
 
@@ -69,12 +73,12 @@ function log(data) {
   return {command: 'log', msg: data}
 }
 
-function emit(data, id, task) {
+function emit(data, tuple) {
   return {
       command: 'emit'
     , tuple: arrayify(data)
-    , anchors: arrayify(id)
-    , task: task
+    , anchors: arrayify(tuple.id)
+    , task: tuple.task
   }
 }
 
@@ -84,37 +88,6 @@ function ack(id) {
 
 function fail(id) {
   return {command: 'fail', id: id}
-}
-
-function deserialize(buf, x, next) {
-  var self = this
-    , str = buf.toString()
-
-  if(str === 'end') {
-    return next()
-  }
-
-  var data = parseJson()
-
-  if(data !== undefined) {
-    self.push(data)
-  }
-
-  next()
-
-  function parseJson() {
-    try {
-      return JSON.parse(str)
-    } catch(err) {
-      self.emit('error', err)
-    }
-  }
-}
-
-function serialize(obj, _, next) {
-  this.push(JSON.stringify(obj) + '\nend\n')
-
-  next()
 }
 
 function arrayify(data) {
