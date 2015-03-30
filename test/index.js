@@ -73,7 +73,7 @@ test('handles events', function(t) {
     if(count === 2) {
       t.deepEqual(
           obj
-        , {command: 'emit', anchors: ['123'], task: 1, tuple: ['rofl']}
+        , {command: 'emit', anchors: ['123'], tuple: ['rofl']}
       )
     }
 
