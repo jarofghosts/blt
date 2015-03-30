@@ -63,7 +63,9 @@ Storm.
 
 * This is experimental and relatively untested, use at your own risk!
 * This module is somewhat optimized for a simplified use-case, if you need more,
-  try [node-storm](http://npm.im/node-storm)
+  try [storm-stream](http://npm.im/storm-stream) or
+  [node-storm](http://npm.im/node-storm).
+* For a more magical approach, check out [garlic](http://npm.im/garlic).
 
 ## License
 
