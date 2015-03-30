@@ -65,6 +65,10 @@ function stormBolt(createStream) {
       return blt.write({command: 'sync'})
     }
 
+    if(Array.isArray(tuple)) {
+      return blt.emit('taskIds', tuple)
+    }
+
     stream.write(tuple)
   }
 }
@@ -78,7 +82,6 @@ function emit(data, tuple) {
       command: 'emit'
     , tuple: arrayify(data)
     , anchors: arrayify(tuple.id)
-    , task: tuple.task
   }
 }
 
