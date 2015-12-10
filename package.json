@@ -1,6 +1,6 @@
 {
   "name": "blt",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "simple storm bolt creation",
   "main": "index.js",
   "scripts": {
