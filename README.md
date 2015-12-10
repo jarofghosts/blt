@@ -1,7 +1,10 @@
 # blt
 
-[![Build Status](http://img.shields.io/travis/jarofghosts/blt.svg?style=flat)](https://travis-ci.org/jarofghosts/blt)
-[![npm install](http://img.shields.io/npm/dm/blt.svg?style=flat)](https://www.npmjs.org/package/blt)
+[![Build Status](http://img.shields.io/travis/jarofghosts/blt.svg?style=flat-square)](https://travis-ci.org/jarofghosts/blt)
+[![npm install](http://img.shields.io/npm/dm/blt.svg?style=flat-square)](https://www.npmjs.org/package/blt)
+[![npm version](https://img.shields.io/npm/v/blt.svg?style=flat-square)](https://www.npmjs.org/package/blt)
+[![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/feross/standard)
+[![License](https://img.shields.io/npm/l/blt.svg?style=flat-square)](https://github.com/jarofghosts/blt/blob/master/LICENSE)
 
 [Storm](https://storm.apache.org/) Bolts without the overhead.
 
@@ -9,7 +12,7 @@
 
 ```javascript
 var through = require('through2')
-  , createBolt = require('blt')
+var createBolt = require('blt')
 
 createBolt(splitSentence)
 
@@ -20,7 +23,7 @@ function splitSentence(configuration) {
 
   function splitWords(obj, _, next) {
     obj.tuple[0].split(' ').forEach(function(word) {
-      splitStream.push([word, obj])
+      splitStream.push(word)
     })
 
     splitStream.emit('ack', obj)
@@ -32,20 +35,25 @@ function splitSentence(configuration) {
 
 ## API
 
-`blt(createStream)`
+`blt(createStream, _opts)`
 
 * `createStream` is a function that can be called with a configuration object
-  and returns a Transform Stream.
-* `blt` will write tuple objects directly to the returned stream, and it is
-  expected to stream arrays of form: `[data, tuple]`, where `data` is the data
-  to emit, and `tuple` is the Storm tuple that it is anchored to.
+  and returns a Duplex Stream.
+* `_opts` is an optional configuration object accepting options:
+  - `anchored` - a Boolean indicating whether you prefer this bolt to provide
+    anchors to Storm.
+* `blt` will write tuple objects directly to the returned stream.
+
+* If `anchored` is true, the stream is expected to stream arrays of form:
+  `[data, tuples]`, where `data` is the data to emit, and `tuples` is the Storm
+  tuple(s) that it is anchored to.
 
 ## Events
 
 * When your stream emits data, `blt` emits the data packaged up in Storm's tuple
   format with all of the applicable anchoring data.
 * If your stream emits a "log" event with an argument, `blt` passes it along to
-  Storm as a "log" event with `msg`.
+  Storm as a "log" event with that argument.
 * If your stream emits a "fail" event with the relevant tuple, `blt` will "fail"
   for you.
 * If your stream emits an "ack" event with the relevant tuple, `blt` will "ack"

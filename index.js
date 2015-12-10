@@ -1,9 +1,10 @@
 var path = require('path')
-  , fs = require('fs')
+var fs = require('fs')
 
 var stormStream = require('storm-stream')
-  , through = require('through2')
-  , touch = require('touch')
+var through = require('through2')
+var arrify = require('arrify')
+var touch = require('touch')
 
 var thisProcess = require('./lib/process')
 
@@ -11,11 +12,12 @@ var PID = thisProcess.pid
 
 module.exports = stormBolt
 
-function stormBolt(createStream) {
+function stormBolt (createStream, _opts) {
+  var opts = _opts || {anchored: false}
   var storm = stormStream()
-    , blt = through.obj()
-    , pidFile
-    , stream
+  var blt = through.obj()
+  var pidFile
+  var stream
 
   blt.pipe(storm)
 
@@ -23,12 +25,12 @@ function stormBolt(createStream) {
 
   return blt
 
-  function setup(data) {
+  function setup (data) {
     pidFile = path.join(data.pidDir, PID.toString())
 
     touch.sync(pidFile)
 
-    thisProcess.on('exit', function() {
+    thisProcess.on('exit', function () {
       fs.unlinkSync(pidFile)
     })
 
@@ -43,29 +45,33 @@ function stormBolt(createStream) {
 
     storm.on('data', processTuple)
 
-    function onLog(message) {
+    function onLog (message) {
       blt.write(log(message))
     }
 
-    function onData(arr) {
-      blt.write(emit(arr[0], arr[1]))
+    function onData (arr) {
+      if (opts.anchored && Array.isArray(arr)) {
+        blt.write(emit(arr[0], arr[1]))
+      } else {
+        blt.write(emit(arr))
+      }
     }
 
-    function onFail(tuple) {
+    function onFail (tuple) {
       blt.write(fail(tuple.id))
     }
 
-    function onAck(tuple) {
+    function onAck (tuple) {
       blt.write(ack(tuple.id))
     }
   }
 
-  function processTuple(tuple) {
-    if(tuple.stream && tuple.stream === '__heartbeat') {
+  function processTuple (tuple) {
+    if (tuple.stream && tuple.stream === '__heartbeat') {
       return blt.write({command: 'sync'})
     }
 
-    if(Array.isArray(tuple)) {
+    if (Array.isArray(tuple)) {
       return blt.emit('taskIds', tuple)
     }
 
@@ -73,26 +79,26 @@ function stormBolt(createStream) {
   }
 }
 
-function log(data) {
+function log (data) {
   return {command: 'log', msg: data}
 }
 
-function emit(data, tuple) {
-  return {
-      command: 'emit'
-    , tuple: arrayify(data)
-    , anchors: arrayify(tuple.id)
+function emit (data, tuple) {
+  var result = {command: 'emit', tuple: arrify(data)}
+
+  if (tuple) {
+    result.anchors = arrify(tuple).map(function (t) {
+      return t.id
+    })
   }
+
+  return result
 }
 
-function ack(id) {
+function ack (id) {
   return {command: 'ack', id: id}
 }
 
-function fail(id) {
+function fail (id) {
   return {command: 'fail', id: id}
-}
-
-function arrayify(data) {
-  return Array.isArray(data) ? data : [data]
 }
